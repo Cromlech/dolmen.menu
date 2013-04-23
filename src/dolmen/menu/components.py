@@ -1,82 +1,40 @@
 # -*- coding: utf-8 -*-
 
 import urllib
-import os
-
-from grokcore.component import title, description, context
-from grokcore.component import baseclass, adapter, implementer
-from grokcore.component.util import sort_components
-from cromlech.browser import ITemplate
-from cromlech.i18n import ILanguage
-from cromlech.browser import IRequest
+from os import path
 
 import dolmen.viewlet
-from dolmen.location import get_absolute_url
+from .directives import title, description
+from .interfaces import IMenu, IMenuEntry
+from crom.utils import sort_components
+from cromlech.browser import IRequest, IURL
+from cromlech.i18n import getLocalizer
 from dolmen.template import TALTemplate
-from dolmen.menu.interfaces import IMenu, IMenuEntry, IMenuEntryViewlet
-
+from dolmen.viewlet import query_components
+from zope.interface import implementer, Interface
 from zope.location import Location
-from zope.component import getAdapters, getMultiAdapter
-from zope.interface import implements, Interface
 from zope.schema.fieldproperty import FieldProperty
 
-try:
-    import zope.security
 
-    def check_security(permission, component):
-        if zope.security.management.getSecurityPolicy() is None:
-            return True
-        if permission == 'zope.Public':
-            # Translate public permission to CheckerPublic
-            permission = zope.security.checker.CheckerPublic
-        return zope.security.checkPermission(permission, component)
+template_dir = path.join(path.dirname(__file__), 'templates')
 
-    CHECKER = check_security
-except ImportError:
-    CHECKER = None
+default_menu_template = TALTemplate(
+    filename=path.join(template_dir, "menu.pt"))
+
+default_entry_template = TALTemplate(
+    filename=path.join(template_dir, "entry.pt"))
 
 
-def query_entries(context, request, view, menu, interface=IMenuEntry):
-    """Query entries of the given menu :
-
-    * Queries the registry according to context, request, view, menu.
-    * Updates the components.
-    * Filters out the unavailable components.
-    * Returns an iterable of components.
-    """
-    def isAvailable(component):
-        return bool(getattr(component, 'available', True))
-
-    def registry_components():
-        for name, entry in getAdapters(
-            (context, request, view, menu), interface):
-
-            success = True
-            if CHECKER is not None:
-                permission = entry.permission
-                if permission is not None:
-                    success = CHECKER(permission, entry)
-
-            if success and isAvailable(entry):
-                if IMenuEntryViewlet.providedBy(entry):
-                    entry.update()
-                yield entry
-
-    assert interface.isOrExtends(IMenuEntry)
-    assert IRequest.providedBy(request), "request must be an IRequest"
-    return registry_components()
-
-
+@implementer(IMenu)
 class Menu(dolmen.viewlet.ViewletManager):
     """Viewlet Manager working as a menu.
 
     template may be provided as an attribute or will be search as an
     adapter of the menu and the request to IPageTemplate
     """
-    baseclass()
-    implements(IMenu)
-    viewlets = []
+    template = default_menu_template
 
+    viewlets = tuple()
     menu_class = FieldProperty(IMenu['menu_class'])
     entry_class = FieldProperty(IMenu['entry_class'])
     context_url = FieldProperty(IMenu['context_url'])
@@ -92,6 +50,10 @@ class Menu(dolmen.viewlet.ViewletManager):
         return component_name
 
     @property
+    def title(self):
+        return title.get(self)
+    
+    @property
     def entries(self):
         return self.viewlets
 
@@ -101,53 +63,28 @@ class Menu(dolmen.viewlet.ViewletManager):
     def getMenuContext(self):
         return self.menu_context or self.context
 
-    @property
-    def target_language(self):
-        return ILanguage(self.request, None)
-
     def update(self):
-        self.__updated = True
-        self.title = title.bind(default=self.__component_name__).get(self)
-
         # We get the real context
         menu_context = self.getMenuContext()
 
         # Get the MenuContext and calculate its url
-        self.context_url = get_absolute_url(menu_context, self.request)
+        self.context_url = str(IURL(menu_context, self.request))
 
         # Get the viewlets, sort them and update them
-        self.viewlets = sort_components(list(query_entries(
-            menu_context, self.request, self.view, self)))
-
-    def render(self):
-        """Template is taken from the template attribute or searching
-        for an adapter to ITemplate for menu and request
-        """
-        template = getattr(self, 'template', None)
-        if template is None:
-            template = getMultiAdapter((self, self.request), ITemplate)
-        return template.render(
-            self, target_language=self.target_language, **self.namespace())
+        self.viewlets = sort_components(list(query_components(
+            menu_context, self.request, self.view, self,
+            interface=IMenuEntry)))
 
 
-class Entry(Location):
+@implementer(IMenuEntry)
+class Entry(dolmen.viewlet.Viewlet):
     """The menu entry viewlet
 
     template may be provided as an attribute or will be search as an
     adapter of the menu and the request to IPageTemplate
     """
-    baseclass()
-    implements(IMenuEntryViewlet)
-    context(Interface)
-
     params = None
-    available = True
-
-    def __init__(self, context, request, view, manager):
-        self.view = self.__parent__ = view
-        self.context = context
-        self.request = request
-        self.manager = manager
+    template = default_entry_template
 
     def __repr__(self):
         return  "<menu.menuentry `%s` for menu `%s`>" % (
@@ -160,15 +97,9 @@ class Entry(Location):
         namespace['request'] = self.request
         namespace['view'] = self.view
         namespace['entry'] = self
+        namespace['viewlet'] = self
         namespace['menu'] = self.manager
         return namespace
-
-    @property
-    def target_language(self):
-        return ILanguage(self.request, None)
-
-    def update(self):
-        pass
 
     @property
     def selected(self):
@@ -199,7 +130,7 @@ class Entry(Location):
 
     @property
     def title(self):
-        return title.bind(default=self.__component_name__).get(self)
+        return title.get(self)
 
     @property
     def permission(self):
@@ -211,31 +142,4 @@ class Entry(Location):
 
     @property
     def description(self):
-        return description.bind(default=None).get(self)
-
-    def render(self):
-        """Template is taken from the template attribute or searching
-        for an adapter to ITemplate for entry and request
-        """
-        template = getattr(self, 'template', None)
-        if template is None:
-            template = getMultiAdapter((self, self.request), ITemplate)
-        return template.render(
-            self, target_language=self.target_language, **self.namespace())
-
-
-_prefix = os.path.dirname(__file__)
-
-
-@adapter(IMenu, Interface)
-@implementer(ITemplate)
-def menu_template(context, request):
-    """default template for the menu"""
-    return TALTemplate(filename=os.path.join(_prefix, "templates/menu.pt"))
-
-
-@adapter(IMenuEntry, Interface)
-@implementer(ITemplate)
-def entry_template(context, request):
-    """default template for a menu entry"""
-    return TALTemplate(filename=os.path.join(_prefix, "templates/entry.pt"))
+        return description.get(self)

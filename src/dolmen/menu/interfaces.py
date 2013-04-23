@@ -5,34 +5,7 @@ from zope.interface import Interface, Attribute
 from zope.location import ILocation
 from dolmen.viewlet import IViewletManager, IViewlet
 
-
-class IMenuEntry(Interface):
-    """A menu entry.
-    """
-    __name__ = schema.ASCIILine(
-        title=u"Identifier",
-        required=True)
-
-    permission = Attribute(
-        u"Permission required to use this component.")
-
-    title = schema.TextLine(
-        required=True,
-        title=u"The destination of the entry")
-
-    selected = schema.Bool(
-        required=True,
-        title=u"The entry is currently selected")
-
-    description = schema.Text(
-        default=u"",
-        title=u"Full description")
-
-    url = schema.URI(
-        required=True,
-        title=u"The destination of the entry")
-
-
+    
 class IMenu(IViewletManager):
     """A menu component.
     """
@@ -59,9 +32,32 @@ class IMenu(IViewletManager):
         title=u"Menu entries CSS class")
 
 
-class IMenuEntryViewlet(IViewlet, IMenuEntry):
-    """A viewlet that acts like a menu entry.
+class IMenuEntry(IViewlet):
+    """A menu entry.
     """
+    __name__ = schema.ASCIILine(
+        title=u"Identifier",
+        required=True)
+
+    permission = Attribute(
+        u"Permission required to use this component.")
+
+    title = schema.TextLine(
+        required=True,
+        title=u"The destination of the entry")
+
+    selected = schema.Bool(
+        required=True,
+        title=u"The entry is currently selected")
+
+    description = schema.Text(
+        default=u"",
+        title=u"Full description")
+
+    url = schema.URI(
+        required=True,
+        title=u"The destination of the entry")
+
     manager = schema.Object(
         schema=IMenu,
         title=u"Menu of this entry")
