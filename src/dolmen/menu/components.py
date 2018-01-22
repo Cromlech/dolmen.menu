@@ -17,12 +17,8 @@ from zope.schema.fieldproperty import FieldProperty
 
 
 template_dir = path.join(path.dirname(__file__), 'templates')
-
-default_menu_template = TALTemplate(
-    filename=path.join(template_dir, "menu.pt"))
-
-default_entry_template = TALTemplate(
-    filename=path.join(template_dir, "entry.pt"))
+default_menu_template = TALTemplate(path.join(template_dir, "menu.pt"))
+default_entry_template = TALTemplate(path.join(template_dir, "entry.pt"))
 
 
 @implementer(IMenu)

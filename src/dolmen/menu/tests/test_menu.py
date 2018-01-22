@@ -5,11 +5,11 @@ Groking::
   >>> from crom import testing, configure
 
   >>> import dolmen.menu
-  >>> import dolmen.location
+  >>> import cromlech.location
   >>> from dolmen.menu.tests import test_menu
 
   >>> testing.setup()
-  >>> configure(dolmen.menu, dolmen.location, test_menu)
+  >>> configure(dolmen.menu, cromlech.location, test_menu)
 
 A root of publication to compute url::
 
@@ -36,7 +36,7 @@ Use it ::
   >>> mymenu.viewlets
   [<menu.menuentry `other` for menu `MyMenu`>, <menu.menuentry `someview` for menu `MyMenu`>, <menu.menuentry `standaloneentry` for menu `MyMenu`>]
 
-  >>> print mymenu.render()  # doctest: +NORMALIZE_WHITESPACE
+  >>> print(mymenu.render())  # doctest: +NORMALIZE_WHITESPACE
   <dl id="mymenu" class="menu">
     <dt>My nice menu</dt>
     <dd>

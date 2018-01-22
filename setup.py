@@ -23,9 +23,9 @@ install_requires = [
 
 
 tests_require = [
+    'pytest',
     'cromlech.browser [test]',
-    'zope.configuration',
-    'dolmen.location',
+    'cromlech.location',
     ]
 
 
