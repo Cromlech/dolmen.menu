@@ -23,7 +23,7 @@ except ImportError:
     class SecurityGetter(object):
         def get(self, factory):
             return None
-    
+
 
 def get_default_name(factory, module=None, **data):
     return factory.__name__.lower()
@@ -95,7 +95,7 @@ def validateMenu(directive, value):
 class menu(martian.Directive):
     scope = martian.CLASS
     store = martian.ONCE
-    validate = validateMenu
+    # validate = validateMenu
 
 
 class global_menuentry(martian.MultipleTimesDirective):

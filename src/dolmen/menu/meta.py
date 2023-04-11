@@ -5,6 +5,7 @@ import dolmen.menu
 from cromlech.browser import IRequest
 from dolmen.menu.declarations import get_default_name
 from zope import component, interface
+from zope.interface.verify import verifyClass
 
 
 def generate_entry(bdict):
@@ -103,7 +104,7 @@ class ViewletMenuEntriesGrokker(martian.ClassGrokker):
                 raise ValueError("Invalid menu type")
 
         factory.__name__ = factory.__component_name__ = name
-        interface.verify.verifyClass(dolmen.menu.IMenuEntry, factory)
+        verifyClass(dolmen.menu.IMenuEntry, factory)
         # We enqueue our component in the registry config.
         config.action(
             discriminator=('menu-entry', context, request,
